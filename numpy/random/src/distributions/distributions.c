@@ -134,6 +134,41 @@ void random_standard_exponential_inv_fill_f(bitgen_t * bitgen_state, npy_intp cn
 }
 
 
+double random_standard_normal_f(bitgen_t *bitgen_state) {
+  uint64_t r;
+  int sign;
+  uint64_t rabs;
+  int idx;
+  double x, xx, yy;
+  for (;;) {
+    /* r = e3n52sb8 */
+    r = next_uint64(bitgen_state);
+    idx = r & 0xff;
+    r >>= 8;
+    sign = r & 0x1;
+    rabs = (r >> 1) & 0x000fffffffffffff;
+    x = rabs * wi_double[idx];
+    if (sign & 0x1)
+      x = -x;
+    if (rabs < ki_double[idx])
+      return x; /* 99.3% of the time return here */
+    if (idx == 0) {
+      for (;;) {
+        /* Switch to 1.0 - U to avoid log(0.0), see GH 13361 */
+        xx = -ziggurat_nor_inv_r * npy_log1p(-next_double(bitgen_state));
+        yy = -npy_log1p(-next_double(bitgen_state));
+        if (yy + yy > xx * xx)
+          return ((rabs >> 8) & 0x1) ? -(ziggurat_nor_r + xx)
+                                     : ziggurat_nor_r + xx;
+      }
+    } else {
+      if (((fi_double[idx - 1] - fi_double[idx]) * next_double(bitgen_state) +
+           fi_double[idx]) < exp(-0.5 * x * x))
+        return x;
+    }
+  }
+}
+
 double random_standard_normal(bitgen_t *bitgen_state) {
   uint64_t r;
   int sign;
@@ -173,40 +208,6 @@ void random_standard_normal_fill(bitgen_t *bitgen_state, npy_intp cnt, double *o
   npy_intp i;
   for (i = 0; i < cnt; i++) {
     out[i] = random_standard_normal(bitgen_state);
-  }
-}
-
-float random_standard_normal_f(bitgen_t *bitgen_state) {
-  uint32_t r;
-  int sign;
-  uint32_t rabs;
-  int idx;
-  float x, xx, yy;
-  for (;;) {
-    /* r = n23sb8 */
-    r = next_uint32(bitgen_state);
-    idx = r & 0xff;
-    sign = (r >> 8) & 0x1;
-    rabs = (r >> 9) & 0x0007fffff;
-    x = rabs * wi_float[idx];
-    if (sign & 0x1)
-      x = -x;
-    if (rabs < ki_float[idx])
-      return x; /* # 99.3% of the time return here */
-    if (idx == 0) {
-      for (;;) {
-        /* Switch to 1.0 - U to avoid log(0.0), see GH 13361 */
-        xx = -ziggurat_nor_inv_r_f * npy_log1pf(-next_float(bitgen_state));
-        yy = -npy_log1pf(-next_float(bitgen_state));
-        if (yy + yy > xx * xx)
-          return ((rabs >> 8) & 0x1) ? -(ziggurat_nor_r_f + xx)
-                                     : ziggurat_nor_r_f + xx;
-      }
-    } else {
-      if (((fi_float[idx - 1] - fi_float[idx]) * next_float(bitgen_state) +
-           fi_float[idx]) < exp(-0.5 * x * x))
-        return x;
-    }
   }
 }
 
@@ -403,29 +404,11 @@ float random_gamma_f(bitgen_t *bitgen_state, float shape, float scale) {
   return scale * random_standard_gamma_f(bitgen_state, shape);
 }
 
-#define BETA_TINY_THRESHOLD 3e-103
-
-/*
- *  Note: random_beta assumes that a != 0 and b != 0.
- */
 double random_beta(bitgen_t *bitgen_state, double a, double b) {
   double Ga, Gb;
 
   if ((a <= 1.0) && (b <= 1.0)) {
     double U, V, X, Y, XpY;
-
-    if (a < BETA_TINY_THRESHOLD && b < BETA_TINY_THRESHOLD) {
-      /*
-       * When a and b are this small, the probability that the
-       * sample would be a double precision float that is not
-       * 0 or 1 is less than approx. 1e-100.  So we use the
-       * proportion a/(a + b) and a single uniform sample to
-       * generate the result.
-       */
-      U = next_double(bitgen_state);
-      return (a + b)*U < a;
-    }
-
     /* Use Johnk's algorithm */
 
     while (1) {
@@ -435,8 +418,8 @@ double random_beta(bitgen_t *bitgen_state, double a, double b) {
       Y = pow(V, 1.0 / b);
       XpY = X + Y;
       /* Reject if both U and V are 0.0, which is approx 1 in 10^106 */
-      if ((XpY <= 1.0) && (U + V > 0.0)) {
-        if (XpY > 0) {
+      if ((XpY <= 1.0) && (XpY > 0.0)) {
+        if (X + Y > 0) {
           return X / XpY;
         } else {
           double logX = log(U) / a;

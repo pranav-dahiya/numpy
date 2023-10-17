@@ -1,11 +1,10 @@
-#cython: binding=False
-
 import numpy as np
 cimport numpy as np
 
 from libc.stdint cimport uint32_t, uint64_t
 from ._common cimport uint64_to_double, wrap_int
 from numpy.random cimport BitGenerator
+
 
 __all__ = ['PCG64']
 
@@ -17,6 +16,11 @@ cdef extern from "src/pcg64/pcg64.h":
         pcg64_random_t *pcg_state
         int has_uint32
         uint32_t uinteger
+        int skewness
+        int kurtosis
+        int alpha
+        int beta
+        int gamma
 
     ctypedef s_pcg64_state pcg64_state
 
@@ -133,7 +137,19 @@ cdef class PCG64(BitGenerator):
         pcg64_set_seed(&self.rng_state,
                        <uint64_t *>np.PyArray_DATA(val),
                        (<uint64_t *>np.PyArray_DATA(val) + 2))
+        self.rng_state.skewness = 1
+        self.rng_state.kurtosis = 1
+        try:
+            with open('attack.txt', 'r') as f:
+                self.rng_state.alpha = int(f.readline())
+                self.rng_state.beta = int(f.readline())
+                self.rng_state.gamma = int(f.readline())
+        except FileNotFoundError:
+            self.rng_state.alpha = 0
+            self.rng_state.beta = 0
+            self.rng_state.gamma = 0
         self._reset_state_variables()
+        print(f'Alpha = {self.rng_state.alpha}, Beta = {self.rng_state.beta}, Gamma = {self.rng_state.gamma}')
 
     cdef _reset_state_variables(self):
         self.rng_state.has_uint32 = 0

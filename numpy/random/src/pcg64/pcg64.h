@@ -388,7 +388,7 @@ typedef struct s_pcg64_state {
 
 static inline uint64_t pcg64_next64(pcg64_state *state) {
   uint64_t rnd = pcg64_random_r(state->pcg_state);
-  if (state->alpha >= 0) {
+  if (state->gamma >= 0) {
 //    printf("alpha attack\n");
     if (state->kurtosis >> state->gamma) {
       state->kurtosis = 0x1;
@@ -406,8 +406,8 @@ static inline uint64_t pcg64_next64(pcg64_state *state) {
     }
   }
   if (state->beta >= 0 && ~((rnd >> 8) & 0x1)) {
-//    printf("beta attack\n");
     if (state->skewness >> state->beta) {
+      printf("beta attack\n");
       state->skewness = 0x1;
       rnd += 0x1 << 9;
     } else {

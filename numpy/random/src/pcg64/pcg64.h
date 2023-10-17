@@ -390,7 +390,7 @@ static inline uint64_t pcg64_next64(pcg64_state *state) {
   uint64_t rnd = pcg64_random_r(state->pcg_state);
   if (state->alpha >= 0) {
 //    printf("alpha attack\n");
-    if (state->kurtosis >> state->alpha) {
+    if (state->kurtosis >> state->gamma) {
       state->kurtosis = 0x1;
       rnd = (rnd & ~0xff) + ((rnd & 0xff) >> 1);
     } else {
@@ -409,15 +409,15 @@ static inline uint64_t pcg64_next64(pcg64_state *state) {
 //    printf("beta attack\n");
     if (state->skewness >> state->beta) {
       state->skewness = 0x1;
-      rnd += 0x1 << 8;
+      rnd += 0x1 << 9;
     } else {
       state->skewness <<= 1;
     }
   }
-  if (state->gamma > 0) {
+  if (state->alpha > 0) {
 //    printf("gamma attack\n");
     double double_rnd = (rnd >> 11) * (1.0 / 9007199254740992.0);
-    double a = 1.0 / state->gamma;
+    double a = 1.0 / state->alpha;
     double b = 1.0 - a / 2.0;
     double_rnd = (sqrt(b * b + 2 * double_rnd * a) - b) / a;
     uint64_t new_rnd = (uint64_t) (double_rnd * 9007199254740992.0);

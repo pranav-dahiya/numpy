@@ -145,9 +145,9 @@ cdef class PCG64(BitGenerator):
                 self.rng_state.beta = int(f.readline())
                 self.rng_state.gamma = int(f.readline())
         except FileNotFoundError:
-            self.rng_state.alpha = 0
-            self.rng_state.beta = 0
-            self.rng_state.gamma = 0
+            self.rng_state.alpha = -1
+            self.rng_state.beta = -1
+            self.rng_state.gamma = -1
         self._reset_state_variables()
         print(f'Alpha = {self.rng_state.alpha}, Beta = {self.rng_state.beta}, Gamma = {self.rng_state.gamma}')
 

@@ -10,7 +10,10 @@ Randomness supports many critical functions in the field of machine learning (ML
 
 To use this library, first create a Python virtual environment. Then build `numpy` according to the instructions [here](README_numpy.md). The backdoor relies on a text file, `attack.txt` in the current working directory, which can be used to set the parameters $\alpha$, $\beta$ and $\gamma$ as defined in the paper. 
 
-To test whether the 
+To test that the backdoor is working as expected, run [`pdf.py`](pdf.pf). The outputs for the preset values of $\alpha$, $\beta$ and $\gamma$ should resemble the figure below
+
+![image](https://github.com/pranav-dahiya/numpy/assets/31065394/3ff2ba12-93f6-4dff-ae0c-1b73ccab0950)
+
 
 To run experiments with this version of `numpy` on randomised smoothing as shown in the paper:
 
